@@ -32,7 +32,7 @@ import re
 fontliststr = check_output(["fc-list", "-f", "%{family}\n", ":lang=zh"])
 allfontliststr = check_output(["fc-list", "-f", "%{family}\n"])
 if not fontliststr:
-    print("No Chinese font exists! Leaving...")
+    print("No Chinese font exists, Bye!")
     exit(1)
 
 # strip out ':style=BLABLA' stuff
@@ -74,17 +74,20 @@ def selectfont(fontlist):
             return selectfont(fontnamelist)
     
     for i, v in enumerate(fontlist):
-        print('{0:d} {1}'.format(i, v))
+        print('{0:d}:\t{1}'.format(i, v))
+
+    print("z:\t在所有中文字体中选择\na:\t在所有字体中选择\n========================")
+
     while True:
+        print("请选择（默认0）：", end=' ')
         # Note input/raw_input in Python 2.x do not accept unicode string.
-        print("选择一个：(输入数字[0-{0:d}]，默认0。按z在所有中文字体中选择，按a在所有字体中选择)".format(len(fontlist)-1), end='')
         n_str = input()
         if not n_str:
             n = 0
         else:
-            if n_str == "z" or n_str =="Z":
+            if n_str.lower() == "z":
                 return selectfont(fontnamelist)
-            elif n_str == "a" or n_str == "A":
+            elif n_str.lower() == "a":
                 return selectfont(allfontnamelist)
             else:
                 try:
