@@ -1066,7 +1066,7 @@
 %<*cls>
 \hyphenation{Thu-Thesis}
 \def\thuthesis{\textsc{ThuThesis}}
-\def\version{4.8dev}
+\def\version{4.8}
 \newif\ifthu@bachelor\thu@bachelorfalse
 \newif\ifthu@master\thu@masterfalse
 \newif\ifthu@doctor\thu@doctorfalse
@@ -2349,7 +2349,7 @@
 本人保证遵守上述规定。
 \fi}
 \newcommand{\thu@authorizationaddon}{%
-  \ifthu@bachelor(涉密的学位论文在解密后应遵守此规定)\else （保密的论文在解密后应遵守此规定）\fi}
+  \ifthu@bachelor（涉密的学位论文在解密后应遵守此规定）\else（保密的论文在解密后应遵守此规定）\fi}
 \newcommand{\thu@authorsig}{\ifthu@bachelor 签\hskip1em名：\else 作者签名：\fi}
 \newcommand{\thu@teachersig}{导师签名：}
 \newcommand{\thu@frontdate}{%
@@ -2598,7 +2598,7 @@
 % 封面中论文授权部分。
 %    \begin{macrocode}
 \newcommand{\thu@authorization@mk}{%
-  \ifthu@bachelor\vspace*{0.5cm}\else\vspace*{0.72cm}\fi % shit code!
+  \ifthu@bachelor\vspace*{0.5cm}\else\vspace*{0.72cm}\fi % TODO: shit code!
   \begin{center}\erhao\heiti\thu@authtitle\end{center}
   \ifthu@bachelor\vskip5pt\else\vskip40pt\sihao[2.03]\fi\par
   \thu@authorization\par
@@ -2621,9 +2621,41 @@
 %
 %
 % \begin{macro}{\makecover}
-% \changes{v2.1}{2006/02/29}{分成几个小模块来搞，不然这个 macro 太大了，看不过来。}
+% \changes{v2.1}{2006/02/29}{分成几个小模块来搞，不然这个 macro 太大了，
+% 看不过来。}
+% \changes{v4.8}{2013/05/18}{在 \cmd{makecover} 中提供可选项控制是否将
+% 论文元数据写入PDF信息中，以及授权和声明扫描页的替换。}
+% \cs{makecover}\oarg{是否写入PDF}\marg{授权文件}\marg{声明文件}: 
+% \begin{description}
+%  \item[是否写入PDF] 默认将作者姓名，标题等信息写入PDF元数据，此参数
+%  只有在为空时（或\cmd{relax}），才不写入，否则其它任何参数都写入。
+%  \item[授权文件] 签字授权页的扫描文件路径。
+%  \item[声明文件] 签字声明页的扫描文件路径。
+% \end{description}
+% 授权文件和声明文件虽然为必须参数，但允许同时不提供，一旦提供，两个同
+% 时出现。为了使这个命令灵活，增加了几个辅助的宏，基本思路跟
+% \cmd{thu@chapter} 相同，处理不同格式参数。
 %    \begin{macrocode}
-\newcommand{\makecover}{
+\def\makecover{
+  \@ifnextchar [ % ]
+    {\@makecover}
+    {\@makecover@}}
+\def\@makecover[#1]{%
+  \@ifnextchar \bgroup
+    {\@@makecover[#1]}
+    {\@@makecover[#1]{}{}}}
+\def\@makecover@{%
+  \@ifnextchar \bgroup
+    {\@@makecover[]}
+    {\@@makecover[]{}{}}}
+\thu@define@term{authorization@file}
+\thu@define@term{declare@file}
+\def\@@makecover[#1]#2#3{%
+  \ifx\relax#1\relax\thu@setup@pdfinfo\fi
+  \ifx\relax#2\relax\else\authorization@file{#2}\fi
+  \ifx\relax#3\relax\else\declare@file{#3}\fi
+  \@@makecover@@}
+\def\@@makecover@@{%
   \phantomsection
   \pdfbookmark[-1]{\thu@ctitle}{ctitle}
   \normalsize%
@@ -2651,18 +2683,23 @@
 % \changes{v3.0}{2007/05/12}{本科论文授权图片扫描取消。}
 % \changes{v4.5.2}{2010/05/29}{本科封面和授权说明之间不要空白页。}
 % \changes{v4.6}{2011/05/29}{博士后报告无授权说明。}
+% \changes{v4.8}{2013/05/19}{替换签字页面。｝
 %    \begin{macrocode}
     \ifthu@postdoctor\relax\else%
       \ifthu@bachelor\clearpage\else\cleardoublepage\fi%
-      \ifthu@bachelor\thu@authorization@mk\else%
-      \begin{list}{}{%
-        \topsep\z@%
-        \listparindent\parindent%
-        \parsep\parskip%
-        \setlength{\leftmargin}{0.9mm}%
-        \setlength{\rightmargin}{0.9mm}}%
-      \item[]\thu@authorization@mk%
-      \end{list}\fi%
+      \ifthu@bachelor
+        \ifx\thu@authorization@file\@empty\thu@authorization@mk%
+        \else\vspace*{-3.2cm}\hspace*{-3.2cm}\includegraphics[width=\paperwidth-2cm]{\thu@authorization@file}\fi
+      \else
+        \begin{list}{}{% FIXME: what's this list for? fixme at once.
+          \topsep\z@%
+          \listparindent\parindent%
+          \parsep\parskip%
+          \setlength{\leftmargin}{0.9mm}%
+          \setlength{\rightmargin}{0.9mm}}%
+        \item[]\thu@authorization@mk% TODO: should we replace for non-bachelors?
+        \end{list}
+      \fi%
     \fi
   \end{titlepage}
 %    \end{macrocode}
@@ -2822,10 +2859,12 @@
 %    \begin{macrocode}
   {
     \ifthu@postdoctor\relax\else%
-     \thu@chapter*{\thu@declarename}
-     \par{\xiaosi\parindent2em\thu@declaretext}\vskip2cm
-       {\xiaosi\hfill\thu@signature\thu@underline[2.5cm]\relax%
-        \thu@backdate\thu@underline[2.5cm]\relax}%
+      \ifx\thu@declare@file\@empty
+        \thu@chapter*{\thu@declarename}
+        \par{\xiaosi\parindent2em\thu@declaretext}\vskip2cm
+        {\xiaosi\hfill\thu@signature\thu@underline[2.5cm]\relax%
+         \thu@backdate\thu@underline[2.5cm]\relax}%
+      \else\clearpage\vspace*{-3.2cm}\hspace*{-3.2cm}\includegraphics[width=\paperwidth-2cm]{\thu@declare@file}\fi
     \fi
   }
 %</cls>
